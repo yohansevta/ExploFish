@@ -186,8 +186,16 @@ end
 
 local net = FindNet()
 local function ResolveRemote(name)
-    if not net then return nil end
+    if not net then 
+        print("[Remote] Network service not found")
+        return nil 
+    end
     local ok, rem = pcall(function() return net:FindFirstChild(name) end)
+    if ok and rem then
+        print("[Remote] ✅ Found:", name)
+    else
+        print("[Remote] ❌ Missing:", name)
+    end
     return ok and rem or nil
 end
 
@@ -1329,16 +1337,34 @@ local function GetServerTime()
     return tick()
 end
 
+-- Smart timing based on animation patterns
+local function GetRealisticTiming(phase)
+    local timings = {
+        charging = {min = 0.8, max = 1.5},    -- Rod charging time
+        casting = {min = 0.2, max = 0.4},     -- Cast animation
+        waiting = {min = 2.0, max = 4.0},     -- Wait for fish
+        reeling = {min = 1.0, max = 2.5},     -- Reel animation
+        holding = {min = 0.5, max = 1.0}      -- Hold fish animation
+    }
+    
+    local timing = timings[phase] or {min = 0.5, max = 1.0}
+    return timing.min + math.random() * (timing.max - timing.min)
+end
+
 -- Enhanced Smart Fishing Cycle with Animation Awareness
 local function DoSmartCycle()
+    print("[Smart Mode] Starting smart fishing cycle...")
     AnimationMonitor.fishingSuccess = false
     AnimationMonitor.currentState = "starting"
     
     -- Phase 1: Equip and prepare
     FixRodOrientation() -- Fix rod orientation at start
     if equipRemote then 
+        print("[Smart Mode] Equipping rod...")
         pcall(function() equipRemote:FireServer(1) end)
         task.wait(GetRealisticTiming("charging"))
+    else
+        print("[Smart Mode] ⚠️ equipRemote not found")
     end
     
     -- Phase 2: Charge rod (with animation-aware timing)
@@ -1349,7 +1375,10 @@ local function DoSmartCycle()
     local timestamp = usePerfect and GetServerTime() or GetServerTime() + math.random()*0.5
     
     if rodRemote and rodRemote:IsA("RemoteFunction") then 
+        print("[Smart Mode] Charging rod with timestamp:", timestamp)
         pcall(function() rodRemote:InvokeServer(timestamp) end)
+    else
+        print("[Smart Mode] ⚠️ rodRemote not found or invalid type")
     end
     
     -- Fix orientation continuously during charging
@@ -1368,7 +1397,10 @@ local function DoSmartCycle()
     local y = usePerfect and 0.969 or (math.random(0,1000)/1000)
     
     if miniGameRemote and miniGameRemote:IsA("RemoteFunction") then 
+        print("[Smart Mode] Starting minigame with values:", x, y)
         pcall(function() miniGameRemote:InvokeServer(x,y) end)
+    else
+        print("[Smart Mode] ⚠️ miniGameRemote not found or invalid type")
     end
     
     -- Wait for cast animation
@@ -1383,7 +1415,10 @@ local function DoSmartCycle()
     FixRodOrientation() -- Fix before completion
     
     if finishRemote then 
+        print("[Smart Mode] Finishing fishing...")
         pcall(function() finishRemote:FireServer() end)
+    else
+        print("[Smart Mode] ⚠️ finishRemote not found")
     end
     
     -- Wait for completion and fish catch animations
@@ -1412,12 +1447,19 @@ local function DoSmartCycle()
 end
 
 local function DoSecureCycle()
-    if inCooldown() then task.wait(1); return end
+    print("[Secure Mode] Starting secure fishing cycle...")
+    if inCooldown() then 
+        print("[Secure Mode] In cooldown, waiting...")
+        task.wait(1); return 
+    end
     
     -- Equip rod first
     if equipRemote then 
+        print("[Secure Mode] Equipping rod...")
         local ok = pcall(function() equipRemote:FireServer(1) end)
         if not ok then print("[Secure Mode] Failed to equip") end
+    else
+        print("[Secure Mode] ⚠️ equipRemote not found")
     end
     
     -- Safe mode logic: random between perfect and normal cast
@@ -1426,8 +1468,11 @@ local function DoSecureCycle()
     -- Charge rod with proper timing
     local timestamp = usePerfect and 9999999999 or (tick() + math.random())
     if rodRemote then
+        print("[Secure Mode] Charging rod with timestamp:", timestamp)
         local ok = pcall(function() rodRemote:InvokeServer(timestamp) end)
         if not ok then print("[Secure Mode] Failed to charge") end
+    else
+        print("[Secure Mode] ⚠️ rodRemote not found")
     end
     
     task.wait(0.1) -- Standard charge wait
@@ -1437,16 +1482,22 @@ local function DoSecureCycle()
     local y = usePerfect and 0.969 or (math.random(0,1000)/1000)
     
     if miniGameRemote then
+        print("[Secure Mode] Starting minigame with values:", x, y)
         local ok = pcall(function() miniGameRemote:InvokeServer(x, y) end)
         if not ok then print("[Secure Mode] Failed minigame") end
+    else
+        print("[Secure Mode] ⚠️ miniGameRemote not found")
     end
     
     task.wait(1.3) -- Standard fishing wait
     
     -- Complete fishing
     if finishRemote then 
+        print("[Secure Mode] Finishing fishing...")
         local ok = pcall(function() finishRemote:FireServer() end)
         if not ok then print("[Secure Mode] Failed to finish") end
+    else
+        print("[Secure Mode] ⚠️ finishRemote not found")
     end
     
     -- Real fish simulation for dashboard  
@@ -3994,10 +4045,19 @@ local function BuildUI()
 
     -- Secure mode button callback
     secureButton.MouseButton1Click:Connect(function() 
+        if Config.enabled then
+            Notify("modern_autofish", "⚠️ AutoFishing already running! Stop first.")
+            return
+        end
+        
         Config.mode = "secure"
-        modeStatus.Text = "🔒 Current: Secure Mode Active"
+        Config.enabled = true
+        sessionId = sessionId + 1
+        modeStatus.Text = "🔒 Current: Secure Mode Running..."
         modeStatus.TextColor3 = Color3.fromRGB(100,255,150)
-        Notify("modern_autofish", "🔒 Secure Mode activated - Safe & reliable fishing!") 
+        
+        Notify("modern_autofish", "🔒 Secure Mode started - Safe & reliable fishing!") 
+        task.spawn(function() AutofishRunner(sessionId) end)
     end)
 
     -- Secure stop button callback
