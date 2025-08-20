@@ -1733,18 +1733,19 @@ local function DoSpeedCycle()
     
     print("[Speed Mode] ✅ Character found, proceeding with cycle...")
     
-    -- Get required remotes with detailed logging
-    local requestRemote = GetRemote("remotes", "requestminigame") or GetRemote("rodremote", "request")
-    local miniGameRemote = GetRemote("remotes", "minigame") or GetRemote("rodremote", "minigame")  
-    local finishRemote = GetRemote("remotes", "endminigame") or GetRemote("rodremote", "end")
+    -- Get required remotes using global variables (like other modes)
+    local requestRemote = miniGameRemote  -- Use global miniGameRemote for requesting
+    local gameRemote = miniGameRemote     -- Use global miniGameRemote for minigame
+    local completionRemote = finishRemote -- Use global finishRemote for completion
     
     -- Debug remote detection
     print("[Speed Mode] Remote check:")
-    print("  - Request remote:", requestRemote and "✅ Found" or "❌ Missing")
-    print("  - Minigame remote:", miniGameRemote and "✅ Found" or "❌ Missing") 
-    print("  - Finish remote:", finishRemote and "✅ Found" or "❌ Missing")
+    print("  - Request remote (miniGameRemote):", requestRemote and "✅ Found" or "❌ Missing")
+    print("  - Minigame remote (miniGameRemote):", gameRemote and "✅ Found" or "❌ Missing") 
+    print("  - Finish remote (finishRemote):", completionRemote and "✅ Found" or "❌ Missing")
+    print("  - Rod remote (rodRemote):", rodRemote and "✅ Found" or "❌ Missing")
     
-    if not miniGameRemote then
+    if not gameRemote then
         print("[Speed Mode] ❌ No minigame remote - cannot continue")
         return
     end
@@ -1796,13 +1797,25 @@ local function DoSpeedCycle()
         task.wait(0.05) -- Shorter delay when skipping
     end
     
-    -- Phase 2: Charge rod (ultra-fast)
+    -- Phase 2: Charge rod (ultra-fast) using global rodRemote
     print("[Speed Mode] Charging rod...")
-    local chargeRemote = GetRemote("remotes", "chargerod") or GetRemote("rodremote", "charge")
-    if chargeRemote then
-        if chargeRemote:IsA("RemoteEvent") then
-            chargeRemote:FireServer()
+    if rodRemote then
+        if rodRemote:IsA("RemoteFunction") then
+            local timestamp = GetServerTime() -- Use perfect timing
+            local ok = pcall(function() rodRemote:InvokeServer(timestamp) end)
+            if ok then
+                print("[Speed Mode] ✅ Rod charged successfully")
+            else
+                print("[Speed Mode] ⚠️ Rod charge failed")
+            end
+        elseif rodRemote:IsA("RemoteEvent") then
+            local ok = pcall(function() rodRemote:FireServer() end)
+            if not ok then
+                print("[Speed Mode] ⚠️ Rod charge event failed")
+            end
         end
+    else
+        print("[Speed Mode] ⚠️ No rod remote found, skipping charge")
     end
     
     task.wait(0.05) -- Ultra-fast charge
@@ -1811,9 +1824,9 @@ local function DoSpeedCycle()
     print("[Speed Mode] Executing perfect minigame...")
     local x, y = 0.5, 0.5 -- Perfect center values (50%, 50%)
     
-    if miniGameRemote and miniGameRemote:IsA("RemoteFunction") then
+    if gameRemote and gameRemote:IsA("RemoteFunction") then
         local minigameStart = tick()
-        local ok = pcall(function() miniGameRemote:InvokeServer(x, y) end)
+        local ok = pcall(function() gameRemote:InvokeServer(x, y) end)
         local minigameTime = tick() - minigameStart
         
         if ok then
@@ -1821,14 +1834,16 @@ local function DoSpeedCycle()
         else 
             print("[Speed Mode] ⚠️ Minigame failed, continuing...")
         end
+    else
+        print("[Speed Mode] ⚠️ No valid minigame remote found")
     end
     
     task.wait(0.05) -- Minimal post-minigame delay
     
     -- Phase 4: Finish fishing (with fallback)
     print("[Speed Mode] Finishing fishing...")
-    if finishRemote and finishRemote:IsA("RemoteEvent") then 
-        local ok = pcall(function() finishRemote:FireServer() end)
+    if completionRemote and completionRemote:IsA("RemoteEvent") then 
+        local ok = pcall(function() completionRemote:FireServer() end)
         if ok then
             print("[Speed Mode] ✅ Fishing finished successfully")
         else
