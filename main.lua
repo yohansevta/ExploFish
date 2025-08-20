@@ -1724,27 +1724,76 @@ local function DoSpeedCycle()
     local cycleStart = tick()
     print("[Speed Mode] 🚀 Starting ultra-fast perfect cycle...")
     
-    -- Get player and rod
+    -- Get player and rod with improved detection
     local character = LocalPlayer.Character
     if not character then 
         print("[Speed Mode] ❌ No character found")
         return 
     end
     
-    local rodTool = character:FindFirstChildOfClass("Tool")
-    if not rodTool or not string.find(string.lower(rodTool.Name), "rod") then
-        print("[Speed Mode] ❌ No fishing rod equipped")
+    -- Improved rod detection - check multiple possibilities
+    local rodTool = nil
+    
+    -- First try: any equipped tool
+    rodTool = character:FindFirstChildOfClass("Tool")
+    
+    -- Second try: check backpack for rod
+    if not rodTool then
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if backpack then
+            for _, tool in pairs(backpack:GetChildren()) do
+                if tool:IsA("Tool") and (string.find(string.lower(tool.Name), "rod") or 
+                   string.find(string.lower(tool.Name), "fishing") or
+                   string.find(string.lower(tool.Name), "pole")) then
+                    rodTool = tool
+                    -- Try to equip it
+                    tool.Parent = character
+                    task.wait(0.1)
+                    break
+                end
+            end
+        end
+    end
+    
+    -- Third try: check if any tool is equipped (even if name doesn't contain "rod")
+    if not rodTool then
+        rodTool = character:FindFirstChildOfClass("Tool")
+        if rodTool then
+            print("[Speed Mode] 🔧 Using equipped tool:", rodTool.Name)
+        end
+    end
+    
+    if not rodTool then
+        print("[Speed Mode] ❌ No fishing tool found - please equip a fishing rod")
         return
     end
     
-    -- Get required remotes (same as secure mode but faster execution)
+    print("[Speed Mode] ✅ Rod detected:", rodTool.Name)
+    
+    -- Get required remotes with detailed logging
     local requestRemote = GetRemote("remotes", "requestminigame") or GetRemote("rodremote", "request")
-    local miniGameRemote = GetRemote("remotes", "minigame") or GetRemote("rodremote", "minigame")
+    local miniGameRemote = GetRemote("remotes", "minigame") or GetRemote("rodremote", "minigame")  
     local finishRemote = GetRemote("remotes", "endminigame") or GetRemote("rodremote", "end")
     
+    -- Debug remote detection
+    print("[Speed Mode] Remote check:")
+    print("  - Request remote:", requestRemote and "✅ Found" or "❌ Missing")
+    print("  - Minigame remote:", miniGameRemote and "✅ Found" or "❌ Missing") 
+    print("  - Finish remote:", finishRemote and "✅ Found" or "❌ Missing")
+    
     if not requestRemote or not miniGameRemote or not finishRemote then
-        print("[Speed Mode] ❌ Required remotes not found")
-        return
+        print("[Speed Mode] ⚠️ Some remotes missing, trying alternative approach...")
+        -- Try to continue with available remotes
+        if not requestRemote then
+            print("[Speed Mode] ⚠️ No request remote found - skipping request phase")
+        end
+        if not miniGameRemote then
+            print("[Speed Mode] ❌ No minigame remote - cannot continue")
+            return
+        end
+        if not finishRemote then
+            print("[Speed Mode] ⚠️ No finish remote found - will try alternative completion")
+        end
     end
     
     -- Update animation state immediately
@@ -1752,15 +1801,27 @@ local function DoSpeedCycle()
         AnimationMonitor.currentState = "fishing"
     end
     
-    -- Phase 1: Request minigame (minimal delay)
-    print("[Speed Mode] Requesting minigame...")
-    if requestRemote:IsA("RemoteEvent") then
-        requestRemote:FireServer()
-    elseif requestRemote:IsA("RemoteFunction") then
-        spawn(function() requestRemote:InvokeServer() end)
+    -- Phase 1: Request minigame (with fallback)
+    if requestRemote then
+        print("[Speed Mode] Requesting minigame...")
+        if requestRemote:IsA("RemoteEvent") then
+            local ok = pcall(function() requestRemote:FireServer() end)
+            if not ok then
+                print("[Speed Mode] ⚠️ Request remote failed")
+            end
+        elseif requestRemote:IsA("RemoteFunction") then
+            spawn(function() 
+                local ok = pcall(function() requestRemote:InvokeServer() end)
+                if not ok then
+                    print("[Speed Mode] ⚠️ Request function failed")
+                end
+            end)
+        end
+        task.wait(0.1) -- Minimal request delay
+    else
+        print("[Speed Mode] ⚠️ Skipping request phase - no remote found")
+        task.wait(0.05) -- Shorter delay when skipping
     end
-    
-    task.wait(0.1) -- Minimal request delay
     
     -- Phase 2: Charge rod (ultra-fast)
     print("[Speed Mode] Charging rod...")
@@ -1791,13 +1852,19 @@ local function DoSpeedCycle()
     
     task.wait(0.05) -- Minimal post-minigame delay
     
-    -- Phase 4: Finish fishing (instant)
+    -- Phase 4: Finish fishing (with fallback)
     print("[Speed Mode] Finishing fishing...")
     if finishRemote and finishRemote:IsA("RemoteEvent") then 
         local ok = pcall(function() finishRemote:FireServer() end)
         if ok then
             print("[Speed Mode] ✅ Fishing finished successfully")
+        else
+            print("[Speed Mode] ⚠️ Finish remote failed")
         end
+    else
+        print("[Speed Mode] ⚠️ No finish remote, using alternative completion...")
+        -- Alternative: wait for natural completion
+        task.wait(0.2)
     end
     
     -- Minimal completion wait
