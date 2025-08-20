@@ -1724,51 +1724,14 @@ local function DoSpeedCycle()
     local cycleStart = tick()
     print("[Speed Mode] 🚀 Starting ultra-fast perfect cycle...")
     
-    -- Get player and rod with improved detection
+    -- Get player character
     local character = LocalPlayer.Character
     if not character then 
         print("[Speed Mode] ❌ No character found")
         return 
     end
     
-    -- Improved rod detection - check multiple possibilities
-    local rodTool = nil
-    
-    -- First try: any equipped tool
-    rodTool = character:FindFirstChildOfClass("Tool")
-    
-    -- Second try: check backpack for rod
-    if not rodTool then
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if backpack then
-            for _, tool in pairs(backpack:GetChildren()) do
-                if tool:IsA("Tool") and (string.find(string.lower(tool.Name), "rod") or 
-                   string.find(string.lower(tool.Name), "fishing") or
-                   string.find(string.lower(tool.Name), "pole")) then
-                    rodTool = tool
-                    -- Try to equip it
-                    tool.Parent = character
-                    task.wait(0.1)
-                    break
-                end
-            end
-        end
-    end
-    
-    -- Third try: check if any tool is equipped (even if name doesn't contain "rod")
-    if not rodTool then
-        rodTool = character:FindFirstChildOfClass("Tool")
-        if rodTool then
-            print("[Speed Mode] 🔧 Using equipped tool:", rodTool.Name)
-        end
-    end
-    
-    if not rodTool then
-        print("[Speed Mode] ❌ No fishing tool found - please equip a fishing rod")
-        return
-    end
-    
-    print("[Speed Mode] ✅ Rod detected:", rodTool.Name)
+    print("[Speed Mode] ✅ Character found, proceeding with cycle...")
     
     -- Get required remotes with detailed logging
     local requestRemote = GetRemote("remotes", "requestminigame") or GetRemote("rodremote", "request")
@@ -1781,24 +1744,34 @@ local function DoSpeedCycle()
     print("  - Minigame remote:", miniGameRemote and "✅ Found" or "❌ Missing") 
     print("  - Finish remote:", finishRemote and "✅ Found" or "❌ Missing")
     
-    if not requestRemote or not miniGameRemote or not finishRemote then
-        print("[Speed Mode] ⚠️ Some remotes missing, trying alternative approach...")
-        -- Try to continue with available remotes
-        if not requestRemote then
-            print("[Speed Mode] ⚠️ No request remote found - skipping request phase")
-        end
-        if not miniGameRemote then
-            print("[Speed Mode] ❌ No minigame remote - cannot continue")
-            return
-        end
-        if not finishRemote then
-            print("[Speed Mode] ⚠️ No finish remote found - will try alternative completion")
-        end
+    if not miniGameRemote then
+        print("[Speed Mode] ❌ No minigame remote - cannot continue")
+        return
     end
     
     -- Update animation state immediately
     if AnimationMonitor then
         AnimationMonitor.currentState = "fishing"
+    end
+    
+    -- Phase 0: Equip rod first (like secure mode)
+    if equipRemote then 
+        print("[Speed Mode] Equipping rod...")
+        local ok = pcall(function() equipRemote:FireServer(1) end)
+        if not ok then 
+            print("[Speed Mode] ⚠️ Failed to equip, continuing anyway...")
+        else
+            print("[Speed Mode] ✅ Rod equipped")
+        end
+        task.wait(0.05)
+    else
+        print("[Speed Mode] ⚠️ No equip remote found, assuming rod is ready")
+    end
+    
+    -- Fix rod orientation
+    if FixRodOrientation then
+        FixRodOrientation()
+        print("[Speed Mode] ✅ Rod orientation fixed")
     end
     
     -- Phase 1: Request minigame (with fallback)
