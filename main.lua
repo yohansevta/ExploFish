@@ -1733,21 +1733,21 @@ local function DoSpeedCycle()
     
     print("[Speed Mode] ✅ Character found, proceeding with cycle...")
     
-    -- Get required remotes using global variables (like other modes)
-    local requestRemote = miniGameRemote  -- Use global miniGameRemote for requesting
+    -- Use global remotes directly (simplified approach)
     local gameRemote = miniGameRemote     -- Use global miniGameRemote for minigame
     local completionRemote = finishRemote -- Use global finishRemote for completion
     
     -- Debug remote detection
     print("[Speed Mode] Remote check:")
-    print("  - Request remote (miniGameRemote):", requestRemote and "✅ Found" or "❌ Missing")
     print("  - Minigame remote (miniGameRemote):", gameRemote and "✅ Found" or "❌ Missing") 
     print("  - Finish remote (finishRemote):", completionRemote and "✅ Found" or "❌ Missing")
     print("  - Rod remote (rodRemote):", rodRemote and "✅ Found" or "❌ Missing")
+    print("  - Equip remote (equipRemote):", equipRemote and "✅ Found" or "❌ Missing")
     
     if not gameRemote then
         print("[Speed Mode] ❌ No minigame remote - cannot continue")
         return
+    end
     end
     
     -- Update animation state immediately
@@ -1764,7 +1764,7 @@ local function DoSpeedCycle()
         else
             print("[Speed Mode] ✅ Rod equipped")
         end
-        task.wait(0.05)
+        task.wait(0.05) -- Ultra-fast equip wait
     else
         print("[Speed Mode] ⚠️ No equip remote found, assuming rod is ready")
     end
@@ -1775,29 +1775,7 @@ local function DoSpeedCycle()
         print("[Speed Mode] ✅ Rod orientation fixed")
     end
     
-    -- Phase 1: Request minigame (with fallback)
-    if requestRemote then
-        print("[Speed Mode] Requesting minigame...")
-        if requestRemote:IsA("RemoteEvent") then
-            local ok = pcall(function() requestRemote:FireServer() end)
-            if not ok then
-                print("[Speed Mode] ⚠️ Request remote failed")
-            end
-        elseif requestRemote:IsA("RemoteFunction") then
-            spawn(function() 
-                local ok = pcall(function() requestRemote:InvokeServer() end)
-                if not ok then
-                    print("[Speed Mode] ⚠️ Request function failed")
-                end
-            end)
-        end
-        task.wait(0.1) -- Minimal request delay
-    else
-        print("[Speed Mode] ⚠️ Skipping request phase - no remote found")
-        task.wait(0.05) -- Shorter delay when skipping
-    end
-    
-    -- Phase 2: Charge rod (ultra-fast) using global rodRemote
+    -- Phase 1: Charge rod first (skip request phase like Secure Mode)
     print("[Speed Mode] Charging rod...")
     if rodRemote then
         if rodRemote:IsA("RemoteFunction") then
