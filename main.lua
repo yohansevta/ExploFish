@@ -1791,7 +1791,7 @@ local function DoSpeedCycle()
                 end
             end)
         end
-        task.wait(0.1) -- Minimal request delay
+        task.wait(0.3) -- Minimal request delay
     else
         print("[Speed Mode] ⚠️ Skipping request phase - no remote found")
         task.wait(0.05) -- Shorter delay when skipping
