@@ -1818,7 +1818,7 @@ local function DoSpeedCycle()
         print("[Speed Mode] ⚠️ No rod remote found, skipping charge")
     end
     
-    task.wait(0.05) -- Ultra-fast charge
+    task.wait(0.4) -- Ultra-fast charge
     
     -- Phase 3: Perfect minigame (always center values for perfect catch)
     print("[Speed Mode] Executing perfect minigame...")
