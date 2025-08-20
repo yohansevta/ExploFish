@@ -1351,6 +1351,70 @@ local function GetRealisticTiming(phase)
     return timing.min + math.random() * (timing.max - timing.min)
 end
 
+-- Monitor character animations for fishing detection
+local function MonitorCharacterAnimations()
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Humanoid") then
+        print("[Animation] Character or Humanoid not found")
+        return
+    end
+    
+    local humanoid = LocalPlayer.Character.Humanoid
+    local animator = humanoid:FindFirstChild("Animator")
+    if not animator then 
+        print("[Animation] Animator not found")
+        return 
+    end
+    
+    -- Track animation changes for fishing detection
+    humanoid.AnimationPlayed:Connect(function(animationTrack)
+        if not AnimationMonitor.isMonitoring then return end
+        
+        local animName = animationTrack.Animation.Name or "Unknown"
+        local currentTime = tick()
+        
+        -- Log fishing-related animations
+        if string.find(animName:lower(), "fish") or 
+           string.find(animName:lower(), "rod") or 
+           string.find(animName:lower(), "reel") or 
+           string.find(animName:lower(), "caught") or
+           string.find(animName:lower(), "cast") then
+            
+            print("[Animation] Detected:", animName, "at", math.floor(currentTime - AnimationMonitor.lastAnimationTime, 2), "seconds")
+            
+            table.insert(AnimationMonitor.animationSequence, {
+                name = animName,
+                timestamp = currentTime,
+                duration = currentTime - AnimationMonitor.lastAnimationTime
+            })
+            
+            -- Update fishing state based on animation
+            local lowerName = animName:lower()
+            if string.find(lowerName, "startcharging") or string.find(lowerName, "charge") then
+                AnimationMonitor.currentState = "charging"
+                print("[Animation] State: charging")
+            elseif string.find(lowerName, "cast") then
+                AnimationMonitor.currentState = "casting"
+                print("[Animation] State: casting")
+            elseif string.find(lowerName, "reel") then
+                AnimationMonitor.currentState = "reeling"
+                print("[Animation] State: reeling")
+            elseif string.find(lowerName, "caughtfish") or string.find(lowerName, "holdfish") or string.find(lowerName, "catch") then
+                AnimationMonitor.currentState = "caught"
+                AnimationMonitor.fishingSuccess = true
+                print("[Animation] FISH CAUGHT DETECTED via animation!")
+            elseif string.find(lowerName, "failure") or string.find(lowerName, "fail") then
+                AnimationMonitor.currentState = "failed"
+                AnimationMonitor.fishingSuccess = false
+                print("[Animation] Fishing failed")
+            end
+            
+            AnimationMonitor.lastAnimationTime = currentTime
+        end
+    end)
+    
+    print("[Animation] Character animation monitoring started")
+end
+
 -- Enhanced Smart Fishing Cycle with Animation Awareness
 local function DoSmartCycle()
     print("[Smart Mode] Starting smart fishing cycle...")
@@ -1362,7 +1426,11 @@ local function DoSmartCycle()
     if equipRemote then 
         print("[Smart Mode] Equipping rod...")
         pcall(function() equipRemote:FireServer(1) end)
-        task.wait(GetRealisticTiming("charging"))
+        if GetRealisticTiming then
+            task.wait(GetRealisticTiming("charging"))
+        else
+            task.wait(1.0) -- Fallback delay
+        end
     else
         print("[Smart Mode] ⚠️ equipRemote not found")
     end
@@ -1383,7 +1451,7 @@ local function DoSmartCycle()
     
     -- Fix orientation continuously during charging
     local chargeStart = tick()
-    local chargeDuration = GetRealisticTiming("charging")
+    local chargeDuration = GetRealisticTiming and GetRealisticTiming("charging") or 1.0
     while tick() - chargeStart < chargeDuration do
         FixRodOrientation() -- Keep fixing during charge animation
         task.wait(0.02) -- Very frequent fixes during charging
@@ -1404,11 +1472,11 @@ local function DoSmartCycle()
     end
     
     -- Wait for cast animation
-    task.wait(GetRealisticTiming("casting"))
+    task.wait(GetRealisticTiming and GetRealisticTiming("casting") or 0.3)
     
     -- Phase 4: Wait for fish (realistic waiting time)
     AnimationMonitor.currentState = "waiting"
-    task.wait(GetRealisticTiming("waiting"))
+    task.wait(GetRealisticTiming and GetRealisticTiming("waiting") or 3.0)
     
     -- Phase 5: Complete fishing
     AnimationMonitor.currentState = "completing"
@@ -1422,7 +1490,7 @@ local function DoSmartCycle()
     end
     
     -- Wait for completion and fish catch animations
-    task.wait(GetRealisticTiming("reeling"))
+    task.wait(GetRealisticTiming and GetRealisticTiming("reeling") or 1.5)
     
     -- Check if fish was caught via animation or simulate
     if not AnimationMonitor.fishingSuccess and not fishCaughtRemote then
@@ -1712,21 +1780,39 @@ local function AutofishRunner(mySession)
     
     -- Start animation monitoring
     AnimationMonitor.isMonitoring = true
-    MonitorCharacterAnimations()
+    if MonitorCharacterAnimations then
+        MonitorCharacterAnimations()
+    else
+        print("[AutofishRunner] ⚠️ MonitorCharacterAnimations function not found")
+    end
     
     -- Auto-fix rod orientation at start
-    FixRodOrientation()
+    if FixRodOrientation then
+        FixRodOrientation()
+    else
+        print("[AutofishRunner] ⚠️ FixRodOrientation function not found")
+    end
     
     Notify("modern_autofish", "Smart AutoFishing started (mode: " .. Config.mode .. ")")
     while Config.enabled and sessionId == mySession do
         local ok, err = pcall(function()
             -- Fix rod orientation before each cycle
-            FixRodOrientation()
+            if FixRodOrientation then
+                FixRodOrientation()
+            end
             
             if Config.mode == "secure" then 
-                DoSecureCycle() 
+                if DoSecureCycle then
+                    DoSecureCycle()
+                else
+                    print("[AutofishRunner] ⚠️ DoSecureCycle function not found")
+                end
             else 
-                DoSmartCycle() -- Default to smart mode
+                if DoSmartCycle then
+                    DoSmartCycle() -- Default to smart mode
+                else
+                    print("[AutofishRunner] ⚠️ DoSmartCycle function not found")
+                end
             end
         end)
         if not ok then
@@ -1744,8 +1830,13 @@ local function AutofishRunner(mySession)
             delay = 0.6 + math.random()*0.4 -- Variable delay for secure mode
         else
             -- Smart mode with animation-based timing
-            local smartDelay = baseDelay + GetRealisticTiming("waiting") * 0.3
-            delay = smartDelay + (math.random()*0.2 - 0.1)
+            if GetRealisticTiming then
+                local smartDelay = baseDelay + GetRealisticTiming("waiting") * 0.3
+                delay = smartDelay + (math.random()*0.2 - 0.1)
+            else
+                delay = baseDelay + (math.random()*0.2 - 0.1)
+                print("[AutofishRunner] ⚠️ GetRealisticTiming function not found, using fallback delay")
+            end
         end
         
         if delay < 0.15 then delay = 0.15 end -- Minimum delay
