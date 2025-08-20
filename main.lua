@@ -1516,16 +1516,29 @@ end
 
 local function DoSecureCycle()
     print("[Secure Mode] Starting secure fishing cycle...")
+    local cycleStart = tick()
+    
     if inCooldown() then 
         print("[Secure Mode] In cooldown, waiting...")
         task.wait(1); return 
     end
     
-    -- Equip rod first
+    -- Reset animation monitor for this cycle
+    if AnimationMonitor then
+        AnimationMonitor.fishingSuccess = false
+        AnimationMonitor.currentState = "starting"
+    end
+    
+    -- Phase 1: Equip rod first with rod orientation fix
+    if FixRodOrientation then
+        FixRodOrientation() -- Fix rod orientation at start
+    end
+    
     if equipRemote then 
         print("[Secure Mode] Equipping rod...")
         local ok = pcall(function() equipRemote:FireServer(1) end)
         if not ok then print("[Secure Mode] Failed to equip") end
+        task.wait(0.3) -- Wait for equip animation
     else
         print("[Secure Mode] ⚠️ equipRemote not found")
     end
@@ -1533,39 +1546,166 @@ local function DoSecureCycle()
     -- Safe mode logic: random between perfect and normal cast
     local usePerfect = math.random(1,100) <= Config.safeModeChance
     
-    -- Charge rod with proper timing
-    local timestamp = usePerfect and 9999999999 or (tick() + math.random())
-    if rodRemote then
+    -- Phase 2: Charge rod with proper timing and rod orientation fix
+    if FixRodOrientation then
+        FixRodOrientation() -- Fix orientation before charging
+    end
+    
+    local timestamp = usePerfect and GetServerTime() or GetServerTime() + math.random()*0.5
+    if rodRemote and rodRemote:IsA("RemoteFunction") then
         print("[Secure Mode] Charging rod with timestamp:", timestamp)
         local ok = pcall(function() rodRemote:InvokeServer(timestamp) end)
         if not ok then print("[Secure Mode] Failed to charge") end
     else
-        print("[Secure Mode] ⚠️ rodRemote not found")
+        print("[Secure Mode] ⚠️ rodRemote not found or invalid type")
     end
     
-    task.wait(0.1) -- Standard charge wait
+    -- Longer wait for charge to complete properly
+    task.wait(0.8 + math.random()*0.3) -- Variable charge wait (0.8-1.1 seconds)
     
-    -- Minigame with safe mode values
+    -- Phase 3: Minigame with safe mode values and rod orientation fix
+    if FixRodOrientation then
+        FixRodOrientation() -- Fix orientation before minigame
+    end
+    
     local x = usePerfect and -1.238 or (math.random(-1000,1000)/1000)
     local y = usePerfect and 0.969 or (math.random(0,1000)/1000)
     
-    if miniGameRemote then
+    if miniGameRemote and miniGameRemote:IsA("RemoteFunction") then
         print("[Secure Mode] Starting minigame with values:", x, y)
-        local ok = pcall(function() miniGameRemote:InvokeServer(x, y) end)
-        if not ok then print("[Secure Mode] Failed minigame") end
+        local minigameStart = tick()
+        local minigameSuccess = false
+        
+        -- Attempt minigame with timeout protection
+        local minigameThread = coroutine.create(function()
+            local ok = pcall(function() 
+                miniGameRemote:InvokeServer(x, y) 
+                minigameSuccess = true
+            end)
+            return ok
+        end)
+        
+        coroutine.resume(minigameThread)
+        
+        -- Wait for minigame completion with timeout
+        local timeout = 5  -- 5 second timeout for minigame
+        while tick() - minigameStart < timeout and not minigameSuccess do
+            task.wait(0.1)
+        end
+        
+        local minigameTime = tick() - minigameStart
+        
+        if minigameSuccess then
+            print(string.format("[Secure Mode] Minigame completed successfully in %.2f seconds", minigameTime))
+        else
+            print(string.format("[Secure Mode] ⚠️ Minigame timed out after %.2f seconds - implementing recovery", minigameTime))
+            -- Recovery: try to finish fishing anyway
+            task.wait(1)
+        end
+        
+        -- If minigame took too long, it might be stuck
+        if minigameTime > 3 then
+            print("[Secure Mode] Minigame took longer than expected - adding recovery delay")
+            task.wait(1)
+        end
     else
-        print("[Secure Mode] ⚠️ miniGameRemote not found")
+        print("[Secure Mode] ⚠️ miniGameRemote not found or invalid type")
     end
     
-    task.wait(1.3) -- Standard fishing wait
+    -- Longer wait for fishing and animation to complete
+    task.wait(2.0 + math.random()*1.0) -- Variable fishing wait (2-3 seconds)
     
-    -- Complete fishing
-    if finishRemote then 
+    -- Phase 4: Complete fishing with rod orientation fix
+    if FixRodOrientation then
+        FixRodOrientation() -- Fix orientation before finishing
+    end
+    
+    if finishRemote and finishRemote:IsA("RemoteEvent") then 
         print("[Secure Mode] Finishing fishing...")
         local ok = pcall(function() finishRemote:FireServer() end)
-        if not ok then print("[Secure Mode] Failed to finish") end
+        if ok then
+            print("[Secure Mode] Fishing completed successfully")
+        else 
+            print("[Secure Mode] Failed to finish") 
+        end
     else
-        print("[Secure Mode] ⚠️ finishRemote not found")
+        print("[Secure Mode] ⚠️ finishRemote not found or invalid type")
+    end
+    
+    -- Wait for completion animation with better stuck detection
+    local waitStart = tick()
+    local fishingCompleted = false
+    
+    while tick() - waitStart < 8 and not fishingCompleted do  -- Maximum 8 seconds wait
+        task.wait(0.1)  -- Faster checks for responsiveness
+        
+        -- Check multiple completion indicators
+        local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+        if playerGui then
+            -- Check for success UI elements
+            local success = playerGui:FindFirstChild("Success") or 
+                          playerGui:FindFirstChild("FishCaught") or
+                          playerGui:FindFirstChild("Complete") or
+                          playerGui:FindFirstChild("CatchUI")
+            if success and success.Visible then
+                print("[Secure Mode] ✅ Fishing success UI detected!")
+                fishingCompleted = true
+                break
+            end
+        end
+        
+        -- Check if rod animation stopped (indicates completion)
+        local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            local animTracks = humanoid:GetPlayingAnimationTracks()
+            local fishingAnim = false
+            for _, track in pairs(animTracks) do
+                if track.Name and string.find(string.lower(track.Name), "fish") then
+                    fishingAnim = true
+                    break
+                end
+            end
+            
+            -- If no fishing animation is playing, fishing likely completed
+            if not fishingAnim then
+                print("[Secure Mode] Animation stopped - fishing complete")
+                fishingCompleted = true
+                break
+            end
+        end
+        
+        -- Check if rod is no longer equipped
+        if rodTool and not rodTool.Equipped then
+            print("[Secure Mode] Rod unequipped - cycle complete")
+            fishingCompleted = true
+            break
+        end
+    end
+    
+    -- Add appropriate wait based on completion status
+    if fishingCompleted then
+        task.wait(0.3 + math.random()*0.2)  -- Shorter wait for successful completion
+    else
+        print("[Secure Mode] ⚠️ Fishing may have timed out - adding recovery delay")
+        task.wait(0.8 + math.random()*0.4)  -- Longer wait for timeout recovery
+    end
+    
+    -- Update animation state
+    if AnimationMonitor then
+        AnimationMonitor.currentState = "idle"
+    end
+    
+    -- Cycle completion logging with enhanced stuck detection
+    local cycleTime = tick() - cycleStart
+    print(string.format("[Secure Mode] Cycle completed in %.2f seconds", cycleTime))
+    
+    -- Enhanced timeout detection and recovery
+    if cycleTime > 12 then
+        print(string.format("[Secure Mode] ⚠️ Very long cycle detected (%.2f seconds) - likely stuck, adding extra recovery", cycleTime))
+        task.wait(2 + math.random())  -- Extended recovery for very long cycles
+    elseif cycleTime > 8 then
+        print(string.format("[Secure Mode] ⚠️ Long cycle detected (%.2f seconds) - adding recovery cooldown", cycleTime))
+        task.wait(1 + math.random()*0.5)  -- Standard recovery for moderately long cycles
     end
     
     -- Real fish simulation for dashboard  
