@@ -455,7 +455,7 @@ end
 local Config = {
     mode = "smart",  -- Default to smart mode (options: "smart", "secure", "enhanced")
     autoRecastDelay = 0.4,
-    safeModeChance = 70,
+    safeModeChance = 80,
     secure_max_actions_per_minute = 12000000,
     secure_detection_cooldown = 5,
     enabled = false,
@@ -467,7 +467,7 @@ local Config = {
     enhanced_safeMode = true,
     enhanced_smartFishing = true,
     enhanced_autoSell = false,
-    enhanced_autoSellInterval = 10  -- Auto sell every 10 fish
+    enhanced_autoSellInterval = 1000  -- Auto sell every 10 fish
 }
 
 -- ====================================================================
