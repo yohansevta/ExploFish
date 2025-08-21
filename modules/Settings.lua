@@ -210,76 +210,26 @@ function Settings.ServerHop()
     
     print("[Settings] 🏃 Hopping to different server...")
     
+    -- Simple server hop without GetServers (more reliable)
     local success, result = pcall(function()
-        local servers = TeleportService:GetServers(game.PlaceId, "", 100)
-        local availableServers = {}
-        
-        for _, server in pairs(servers) do
-            if server.Playing < server.MaxPlayers and server.Id ~= game.JobId then
-                table.insert(availableServers, server)
-            end
-        end
-        
-        if #availableServers > 0 then
-            local randomServer = availableServers[math.random(1, #availableServers)]
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, randomServer.Id, LocalPlayer)
-            return true
-        else
-            print("[Settings] ⚠️ No available servers found")
-            return false
-        end
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
     end)
     
     if not success then
         print("[Settings] ❌ Server hop failed:", result)
-        -- Fallback to regular teleport
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        return false
     end
     
-    return success
+    return true
 end
 
 -- Find server with fewer players
 function Settings.ServerSmall()
     print("[Settings] 🔍 Finding server with fewer players...")
     
-    local success, result = pcall(function()
-        local servers = TeleportService:GetServers(game.PlaceId, "", 100)
-        local smallServers = {}
-        
-        for _, server in pairs(servers) do
-            if server.Playing <= Settings.config.preferredPlayerCount and 
-               server.Playing > 0 and 
-               server.Id ~= game.JobId then
-                table.insert(smallServers, {
-                    server = server,
-                    playerCount = server.Playing
-                })
-            end
-        end
-        
-        if #smallServers > 0 then
-            -- Sort by player count (ascending)
-            table.sort(smallServers, function(a, b) 
-                return a.playerCount < b.playerCount 
-            end)
-            
-            local targetServer = smallServers[1].server
-            print("[Settings] 📍 Found small server with", targetServer.Playing, "players")
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, targetServer.Id, LocalPlayer)
-            return true
-        else
-            print("[Settings] ⚠️ No small servers found, using regular server hop")
-            return Settings.ServerHop()
-        end
-    end)
-    
-    if not success then
-        print("[Settings] ❌ Server small search failed:", result)
-        return Settings.ServerHop()
-    end
-    
-    return success
+    -- Fallback to regular server hop since GetServers might not be available
+    print("[Settings] ⚠️ Using regular server hop (GetServers not available)")
+    return Settings.ServerHop()
 end
 
 -- ====================================================================
@@ -306,12 +256,20 @@ end
 
 -- Get server info
 function Settings.GetServerInfo()
+    local ping = 0
+    local success, result = pcall(function()
+        return LocalPlayer:GetNetworkPing() * 1000
+    end)
+    if success then
+        ping = result
+    end
+    
     return {
         players = #Players:GetPlayers(),
         maxPlayers = Players.MaxPlayers,
         jobId = game.JobId,
         placeId = game.PlaceId,
-        ping = LocalPlayer:GetNetworkPing() * 1000
+        ping = ping
     }
 end
 

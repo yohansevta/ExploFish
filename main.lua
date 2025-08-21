@@ -20,10 +20,17 @@ local function loadModuleFromGitHub(moduleName)
     end)
     
     if success then
-        print("[ModuleLoader] ✅ Successfully loaded:", moduleName)
+        print("[ModuleLoader] ✅ Successfully fetched:", moduleName)
         local moduleFunc, err = loadstring(result)
         if moduleFunc then
-            return moduleFunc()
+            local moduleSuccess, module = pcall(moduleFunc)
+            if moduleSuccess then
+                print("[ModuleLoader] ✅ Successfully loaded:", moduleName)
+                return module
+            else
+                warn("[ModuleLoader] ❌ Failed to execute module:", moduleName, module)
+                return nil
+            end
         else
             warn("[ModuleLoader] ❌ Failed to compile module:", moduleName, err)
             return nil
@@ -57,7 +64,17 @@ if not Settings then
         RejoinServer = function() return false end,
         ServerHop = function() return false end,
         ServerSmall = function() return false end,
-        GetStatus = function() return {fpsBoost = false, hdrShader = false} end
+        GetStatus = function() return {fpsBoost = false, hdrShader = false} end,
+        GetServerInfo = function() 
+            return {
+                players = #Players:GetPlayers(),
+                maxPlayers = Players.MaxPlayers,
+                jobId = game.JobId,
+                placeId = game.PlaceId,
+                ping = 0
+            } 
+        end,
+        Initialize = function() return true end
     }
 else
     print("[ModuleLoader] ⚙️ Settings module loaded successfully")
