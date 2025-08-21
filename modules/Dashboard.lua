@@ -12,39 +12,88 @@ local LocalPlayer = Players.LocalPlayer
 local Dashboard = {}
 
 -- ====================================================================
--- FISH RARITY CATEGORIES
+-- FISH RARITY CATEGORIES (Updated from namefish.txt)
 -- ====================================================================
 local FishRarity = {
     MYTHIC = {
-        "Hawks Turtle", "Dotted Stingray", "Hammerhead Shark", "Manta Ray", 
-        "Abyss Seahorse", "Blueflame Ray", "Prismy Seahorse", "Loggerhead Turtle"
+        -- Legendary creatures and special fish
+        "Great Christmas Whale", "Great Whale", "Robot Kraken", "Giant Squid", 
+        "Hammerhead Shark", "Thresher Shark", "Blob Shark", "Plasma Shark", 
+        "Frostborn Shark", "Loving Shark", "Ghost Shark", "Gingerbread Shark",
+        "Hawks Turtle", "Loggerhead Turtle", "Gingerbread Turtle",
+        "Manta Ray", "Dotted Stingray", "Blueflame Ray"
     },
     LEGENDARY = {
-        "Blue Lobster", "Greenbee Grouper", "Starjam Tang", "Yellowfin Tuna",
-        "Chrome Tuna", "Magic Tang", "Enchanted Angelfish", "Lavafin Tuna", 
-        "Lobster", "Bumblebee Grouper"
+        -- Rare special fish and enchanted varieties
+        "Forsaken", "Red Matter", "Lightning", "Crystalized", "Earthly", 
+        "Neptune's Trident", "Polarized", "Monochrome", "Heavenly", "Blossom",
+        "Aqua Prism", "Aquatic", "Loving", "Lightsaber", "Aether Shard",
+        "Flower Garden", "Amber", "Jelly",
+        -- Premium tunas and groupers
+        "Yellowfin Tuna", "Chrome Tuna", "Lavafin Tuna", "Silver Tuna",
+        "Bumblebee Grouper", "Greenbee Grouper", "Panther Grouper"
     },
     EPIC = {
-        "Domino Damsel", "Panther Grouper", "Unicorn Tang", "Dorhey Tang",
-        "Moorish Idol", "Cow Clownfish", "Astra Damsel", "Firecoal Damsel",
-        "Longnose Butterfly", "Sushi Cardinal"
+        -- Event fish and special varieties
+        "Gingerbread Clownfish", "Gingerbread Tang", "Christmastree Longnose",
+        "Candycane Lobster", "Festive Pufferfish", "Festive Goby", "Mistletoe Damsel",
+        "Abyssal Chroma", "Ballina Angelfish", "Conspi Angelfish", "Masked Angelfish", 
+        "Watanabei Angelfish", "Enchanted Angelfish", "Korean Angelfish",
+        -- Rare tangs and special fish
+        "Magic Tang", "Starjam Tang", "Volsail Tang", "Fade Tang", "Sail Tang", 
+        "White Tang", "Patriot Tang", "Unicorn Tang", "Vintage Blue Tang",
+        -- Deep sea creatures
+        "Viperfish", "Fangtooth", "Electric Eel", "Vampire Squid", "Dark Eel",
+        "Angler Fish", "Monk Fish", "Worm Fish", "Ghost Worm Fish"
     },
     RARE = {
-        "Scissortail Dartfish", "White Clownfish", "Darwin Clownfish", 
-        "Korean Angelfish", "Candy Butterfly", "Jewel Tang", "Charmed Tang",
-        "Kau Cardinal", "Fire Goby"
+        -- Quality fish varieties
+        "Blue Lobster", "Lobster", "King Crab", "Queen Crab", "Deep Sea Crab", "Hermit Crab",
+        "Abyss Seahorse", "Prismy Seahorse", "Strippled Seahorse",
+        "Axolotl", "Pufferfish", "Swordfish", "Pilot Fish", "Boar Fish", "Blob Fish",
+        "Rockfish", "Sheepshead Fish", "Catfish", "Coney Fish", "Parrot Fish", "Red Snapper",
+        -- Butterfly and angel fish
+        "Candy Butterfly", "Banded Butterfly", "Longnose Butterfly", "Maroon Butterfly",
+        "Tricolore Butterfly", "Copperband Butterfly", "Specked Butterfly", "Zoster Butterfly",
+        "Racoon Butterfly Fish", "Lava Butterfly",
+        -- Cardinals and gobies
+        "Kau Cardinal", "Sushi Cardinal", "Lined Cardinal Fish", "Rockform Cardianl",
+        "Fire Goby", "Magma Goby", "Orangy Goby", "Shrimp Goby", "Blue-Banded Goby", "Pygmy Goby"
     },
     UNCOMMON = {
-        "Maze Angelfish", "Tricolore Butterfly", "Flame Angelfish", 
-        "Yello Damselfish", "Vintage Damsel", "Coal Tang", "Magma Goby",
-        "Banded Butterfly", "Shrimp Goby"
+        -- Standard quality fish
+        "Moorish Idol", "Scissortail Dartfish", "Skunk Tilefish", "Spotted Lantern Fish",
+        "Salmon", "Jellyfish", "Dead Fish", "Skeleton Fish",
+        -- Clownfish varieties
+        "Clownfish", "White Clownfish", "Cow Clownfish", "Darwin Clownfish", "Blumato Clownfish",
+        -- Damsel varieties
+        "Domino Damsel", "Azure Damsel", "Astra Damsel", "Corazon Damsel", "Firecoal Damsel",
+        "Vintage Damsel", "Yello Damselfish", "Bleekers Damsel", "Pink Smith Damsel",
+        -- Tang varieties
+        "Dorhey Tang", "Coal Tang", "Jewel Tang", "Charmed Tang",
+        -- Angelfish varieties
+        "Flame Angelfish", "Maze Angelfish", "Boa Angelfish", "Yellowstate Angelfish",
+        -- Basslets
+        "Ash Basslet", "Volcanic Basslet", "Orange Basslet", "Blackcap Basslet"
     },
     COMMON = {
-        "Orangy Goby", "Specked Butterfly", "Corazon Damse", "Copperband Butterfly",
-        "Strawberry Dotty", "Azure Damsel", "Clownfish", "Skunk Tilefish",
-        "Yellowstate Angelfish", "Vintage Blue Tang", "Ash Basslet", 
-        "Volcanic Basslet", "Boa Angelfish", "Jennifer Dottyback", "Reef Chromis"
+        -- Basic fish varieties
+        "Reef Chromis", "Slurpfish Chromis", "Jennifer Dottyback", "Strawberry Dotty",
+        -- Common variations and basic fish
+        "Cute Rod", "Enchant Stone", "Super Enchant Stone",
+        -- Plaques and collectibles
+        "DEC24 - Wood Plaque", "DEC24 - Sapphire Plaque", "DEC24 - Silver Plaque", "DEC24 - Golden Plaque",
+        "Bandit Angelfish"
     }
+}
+
+-- ====================================================================
+-- FISH VARIANTS (Special modifiers that affect rarity)
+-- ====================================================================
+local FishVariants = {
+    ULTRA_RARE = {"Galaxy", "Lightning", "Radioactive", "Holographic"},
+    RARE = {"Ghost", "Gold", "Gemstone", "Frozen", "Midnight"},
+    UNCOMMON = {"Corrupt", "Fairy Dust", "Festive", "Stone", "Albino"}
 }
 
 -- ====================================================================
@@ -84,16 +133,66 @@ Dashboard.data = {
 -- UTILITY FUNCTIONS
 -- ====================================================================
 
--- Get fish rarity based on name
+-- Get fish rarity based on name and variants
 function Dashboard.GetFishRarity(fishName)
-    for rarity, fishList in pairs(FishRarity) do
-        for _, fish in pairs(fishList) do
-            if string.find(string.lower(fishName), string.lower(fish)) then
-                return rarity
+    local baseFishName = fishName
+    local variant = nil
+    local rarityBonus = 0
+    
+    -- Check for variants first
+    for variantRarity, variants in pairs(FishVariants) do
+        for _, variantName in pairs(variants) do
+            if string.find(string.lower(fishName), string.lower(variantName)) then
+                variant = variantName
+                if variantRarity == "ULTRA_RARE" then
+                    rarityBonus = 2
+                elseif variantRarity == "RARE" then
+                    rarityBonus = 1
+                elseif variantRarity == "UNCOMMON" then
+                    rarityBonus = 0
+                end
+                -- Remove variant from fish name for base rarity check
+                baseFishName = string.gsub(fishName, variantName, ""):gsub("%s+", " "):gsub("^%s*(.-)%s*$", "%1")
+                break
             end
         end
+        if variant then break end
     end
-    return "COMMON"
+    
+    -- Check base fish rarity
+    local baseRarity = "COMMON"
+    local rarityOrder = {"MYTHIC", "LEGENDARY", "EPIC", "RARE", "UNCOMMON", "COMMON"}
+    
+    for rarity, fishList in pairs(FishRarity) do
+        for _, fish in pairs(fishList) do
+            if string.find(string.lower(baseFishName), string.lower(fish)) or 
+               string.find(string.lower(fishName), string.lower(fish)) then
+                baseRarity = rarity
+                break
+            end
+        end
+        if baseRarity ~= "COMMON" then break end
+    end
+    
+    -- Apply rarity bonus from variants
+    local rarityIndex = 6 -- Default to COMMON (index 6)
+    for i, rarity in ipairs(rarityOrder) do
+        if baseRarity == rarity then
+            rarityIndex = i
+            break
+        end
+    end
+    
+    -- Apply bonus (move up in rarity)
+    rarityIndex = math.max(1, rarityIndex - rarityBonus)
+    local finalRarity = rarityOrder[rarityIndex]
+    
+    -- Debug info for variant fish
+    if variant then
+        print("[Dashboard] Variant fish detected:", fishName, "| Base:", baseRarity, "| Variant:", variant, "| Final:", finalRarity)
+    end
+    
+    return finalRarity
 end
 
 -- Detect current player location

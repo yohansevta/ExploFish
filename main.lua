@@ -47,6 +47,23 @@ else
     Dashboard.Initialize()
 end
 
+-- Load Settings module
+local Settings = loadModuleFromGitHub("Settings")
+if not Settings then
+    warn("[ModuleLoader] ❌ Failed to load Settings module - using fallback")
+    Settings = {
+        ToggleFPSBoost = function() return false end,
+        ToggleHDRShader = function() return false end,
+        RejoinServer = function() return false end,
+        ServerHop = function() return false end,
+        ServerSmall = function() return false end,
+        GetStatus = function() return {fpsBoost = false, hdrShader = false} end
+    }
+else
+    print("[ModuleLoader] ⚙️ Settings module loaded successfully")
+    Settings.Initialize()
+end
+
 -- Must run on client
 if not RunService:IsClient() then
     warn("modern_autofish: must run as a LocalScript on the client (StarterPlayerScripts). Aborting.")
@@ -2486,6 +2503,20 @@ local function BuildUI()
     local dashboardTabPadding = Instance.new("UIPadding", dashboardTabBtn)
     dashboardTabPadding.PaddingLeft = UDim.new(0, 10)
 
+    local settingsTabBtn = Instance.new("TextButton", sidebar)
+    settingsTabBtn.Size = UDim2.new(1, -10, 0, 40)
+    settingsTabBtn.Position = UDim2.new(0, 5, 0, 260)
+    settingsTabBtn.Text = "⚙️ Settings"
+    settingsTabBtn.Font = Enum.Font.GothamSemibold
+    settingsTabBtn.TextSize = 14
+    settingsTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
+    settingsTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
+    settingsTabBtn.TextXAlignment = Enum.TextXAlignment.Left
+    local settingsTabCorner = Instance.new("UICorner", settingsTabBtn)
+    settingsTabCorner.CornerRadius = UDim.new(0, 6)
+    local settingsTabPadding = Instance.new("UIPadding", settingsTabBtn)
+    settingsTabPadding.PaddingLeft = UDim.new(0, 10)
+
     -- Content area on the right
     local contentContainer = Instance.new("Frame", panel)
     contentContainer.Size = UDim2.new(1, -145, 1, -50)
@@ -4490,8 +4521,167 @@ local function BuildUI()
         end)
     end)
 
+    -- Settings Tab Content
+    local settingsFrame = Instance.new("Frame", contentContainer)
+    settingsFrame.Size = UDim2.new(1, 0, 1, -10)
+    settingsFrame.Position = UDim2.new(0, 0, 0, 0)
+    settingsFrame.BackgroundTransparency = 1
+    settingsFrame.Visible = false
+
+    local settingsTitle = Instance.new("TextLabel", settingsFrame)
+    settingsTitle.Size = UDim2.new(1, 0, 0, 24)
+    settingsTitle.Text = "Game Performance & Server Management"
+    settingsTitle.Font = Enum.Font.GothamBold
+    settingsTitle.TextSize = 16
+    settingsTitle.TextColor3 = Color3.fromRGB(235,235,235)
+    settingsTitle.BackgroundTransparency = 1
+    settingsTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+    -- Create scrollable frame for settings
+    local settingsScrollFrame = Instance.new("ScrollingFrame", settingsFrame)
+    settingsScrollFrame.Size = UDim2.new(1, 0, 1, -30)
+    settingsScrollFrame.Position = UDim2.new(0, 0, 0, 30)
+    settingsScrollFrame.BackgroundColor3 = Color3.fromRGB(35,35,42)
+    settingsScrollFrame.BorderSizePixel = 0
+    settingsScrollFrame.ScrollBarThickness = 6
+    settingsScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(80,80,80)
+    settingsScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 500)
+    Instance.new("UICorner", settingsScrollFrame)
+
+    -- Performance Settings Section
+    local performanceSection = Instance.new("Frame", settingsScrollFrame)
+    performanceSection.Size = UDim2.new(1, -10, 0, 180)
+    performanceSection.Position = UDim2.new(0, 5, 0, 5)
+    performanceSection.BackgroundColor3 = Color3.fromRGB(45,45,52)
+    performanceSection.BorderSizePixel = 0
+    Instance.new("UICorner", performanceSection)
+
+    local performanceTitle = Instance.new("TextLabel", performanceSection)
+    performanceTitle.Size = UDim2.new(1, -20, 0, 25)
+    performanceTitle.Position = UDim2.new(0, 10, 0, 5)
+    performanceTitle.Text = "⚡ Performance Settings"
+    performanceTitle.Font = Enum.Font.GothamBold
+    performanceTitle.TextSize = 14
+    performanceTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
+    performanceTitle.BackgroundTransparency = 1
+    performanceTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+    -- FPS Boost Toggle
+    local fpsBoostBtn = Instance.new("TextButton", performanceSection)
+    fpsBoostBtn.Size = UDim2.new(0.48, -5, 0, 35)
+    fpsBoostBtn.Position = UDim2.new(0, 10, 0, 35)
+    fpsBoostBtn.Text = "🚀 Boost FPS"
+    fpsBoostBtn.Font = Enum.Font.GothamSemibold
+    fpsBoostBtn.TextSize = 12
+    fpsBoostBtn.BackgroundColor3 = Color3.fromRGB(70,130,255)
+    fpsBoostBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    local fpsBoostCorner = Instance.new("UICorner", fpsBoostBtn)
+    fpsBoostCorner.CornerRadius = UDim.new(0,6)
+
+    -- HDR Shader Toggle
+    local hdrShaderBtn = Instance.new("TextButton", performanceSection)
+    hdrShaderBtn.Size = UDim2.new(0.48, -5, 0, 35)
+    hdrShaderBtn.Position = UDim2.new(0.52, 5, 0, 35)
+    hdrShaderBtn.Text = "🌈 HDR Shader"
+    hdrShaderBtn.Font = Enum.Font.GothamSemibold
+    hdrShaderBtn.TextSize = 12
+    hdrShaderBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+    hdrShaderBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    local hdrShaderCorner = Instance.new("UICorner", hdrShaderBtn)
+    hdrShaderCorner.CornerRadius = UDim.new(0,6)
+
+    -- Performance Status
+    local performanceStatus = Instance.new("TextLabel", performanceSection)
+    performanceStatus.Size = UDim2.new(1, -20, 0, 50)
+    performanceStatus.Position = UDim2.new(0, 10, 0, 80)
+    performanceStatus.Text = "⚡ FPS Boost: OFF | 🌈 HDR Shader: OFF"
+    performanceStatus.Font = Enum.Font.GothamSemibold
+    performanceStatus.TextSize = 11
+    performanceStatus.TextColor3 = Color3.fromRGB(200, 200, 200)
+    performanceStatus.BackgroundTransparency = 1
+    performanceStatus.TextXAlignment = Enum.TextXAlignment.Center
+    performanceStatus.TextWrapped = true
+
+    -- Performance Info
+    local performanceInfo = Instance.new("TextLabel", performanceSection)
+    performanceInfo.Size = UDim2.new(1, -20, 0, 40)
+    performanceInfo.Position = UDim2.new(0, 10, 0, 135)
+    performanceInfo.Text = "💡 FPS Boost reduces graphics quality for better performance\n🎨 HDR Shader enhances visual effects but may reduce FPS"
+    performanceInfo.Font = Enum.Font.Gotham
+    performanceInfo.TextSize = 10
+    performanceInfo.TextColor3 = Color3.fromRGB(150, 150, 150)
+    performanceInfo.BackgroundTransparency = 1
+    performanceInfo.TextXAlignment = Enum.TextXAlignment.Left
+    performanceInfo.TextWrapped = true
+
+    -- Server Management Section
+    local serverSection = Instance.new("Frame", settingsScrollFrame)
+    serverSection.Size = UDim2.new(1, -10, 0, 200)
+    serverSection.Position = UDim2.new(0, 5, 0, 195)
+    serverSection.BackgroundColor3 = Color3.fromRGB(45,45,52)
+    serverSection.BorderSizePixel = 0
+    Instance.new("UICorner", serverSection)
+
+    local serverTitle = Instance.new("TextLabel", serverSection)
+    serverTitle.Size = UDim2.new(1, -20, 0, 25)
+    serverTitle.Position = UDim2.new(0, 10, 0, 5)
+    serverTitle.Text = "🌐 Server Management"
+    serverTitle.Font = Enum.Font.GothamBold
+    serverTitle.TextSize = 14
+    serverTitle.TextColor3 = Color3.fromRGB(100, 255, 150)
+    serverTitle.BackgroundTransparency = 1
+    serverTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+    -- Rejoin Server Button
+    local rejoinBtn = Instance.new("TextButton", serverSection)
+    rejoinBtn.Size = UDim2.new(0.48, -5, 0, 35)
+    rejoinBtn.Position = UDim2.new(0, 10, 0, 35)
+    rejoinBtn.Text = "🔄 Rejoin Server"
+    rejoinBtn.Font = Enum.Font.GothamSemibold
+    rejoinBtn.TextSize = 12
+    rejoinBtn.BackgroundColor3 = Color3.fromRGB(74,155,88)
+    rejoinBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    local rejoinCorner = Instance.new("UICorner", rejoinBtn)
+    rejoinCorner.CornerRadius = UDim.new(0,6)
+
+    -- Server Hop Button
+    local serverHopBtn = Instance.new("TextButton", serverSection)
+    serverHopBtn.Size = UDim2.new(0.48, -5, 0, 35)
+    serverHopBtn.Position = UDim2.new(0.52, 5, 0, 35)
+    serverHopBtn.Text = "🏃 Server Hop"
+    serverHopBtn.Font = Enum.Font.GothamSemibold
+    serverHopBtn.TextSize = 12
+    serverHopBtn.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+    serverHopBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    local serverHopCorner = Instance.new("UICorner", serverHopBtn)
+    serverHopCorner.CornerRadius = UDim.new(0,6)
+
+    -- Server Small Button
+    local serverSmallBtn = Instance.new("TextButton", serverSection)
+    serverSmallBtn.Size = UDim2.new(1, -20, 0, 35)
+    serverSmallBtn.Position = UDim2.new(0, 10, 0, 80)
+    serverSmallBtn.Text = "👥 Server Small (Less Players)"
+    serverSmallBtn.Font = Enum.Font.GothamSemibold
+    serverSmallBtn.TextSize = 12
+    serverSmallBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+    serverSmallBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    local serverSmallCorner = Instance.new("UICorner", serverSmallBtn)
+    serverSmallCorner.CornerRadius = UDim.new(0,6)
+
+    -- Server Status
+    local serverStatus = Instance.new("TextLabel", serverSection)
+    serverStatus.Size = UDim2.new(1, -20, 0, 60)
+    serverStatus.Position = UDim2.new(0, 10, 0, 125)
+    serverStatus.Text = "🌐 Current Server: Loading...\n👥 Players: --/-- | 📶 Ping: --ms"
+    serverStatus.Font = Enum.Font.GothamSemibold
+    serverStatus.TextSize = 11
+    serverStatus.TextColor3 = Color3.fromRGB(200, 200, 200)
+    serverStatus.BackgroundTransparency = 1
+    serverStatus.TextXAlignment = Enum.TextXAlignment.Center
+    serverStatus.TextWrapped = true
+
     -- Robust tab switching: collect tabs and provide SwitchTo
-    local Tabs = { FishingAI = fishingAIFrame, Teleport = teleportFrame, Player = playerFrame, Feature = featureFrame, Dashboard = dashboardFrame }
+    local Tabs = { FishingAI = fishingAIFrame, Teleport = teleportFrame, Player = playerFrame, Feature = featureFrame, Dashboard = dashboardFrame, Settings = settingsFrame }
     local function SwitchTo(name)
         for k, v in pairs(Tabs) do
             v.Visible = (k == name)
@@ -4509,6 +4699,8 @@ local function BuildUI()
             featureTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
             dashboardTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
             dashboardTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
+            settingsTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
+            settingsTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
             contentTitle.Text = "Smart AI Fishing Configuration"
         elseif name == "Teleport" then
             teleportTabBtn.BackgroundColor3 = Color3.fromRGB(45,45,50)
@@ -4521,6 +4713,8 @@ local function BuildUI()
             featureTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
             dashboardTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
             dashboardTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
+            settingsTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
+            settingsTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
             contentTitle.Text = "Island Locations"
         elseif name == "Player" then
             playerTabBtn.BackgroundColor3 = Color3.fromRGB(45,45,50)
@@ -4533,6 +4727,8 @@ local function BuildUI()
             featureTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
             dashboardTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
             dashboardTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
+            settingsTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
+            settingsTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
             contentTitle.Text = "Player Teleport"
             updatePlayerList(searchBox.Text) -- Refresh when switching to player tab
         elseif name == "Feature" then
@@ -4546,7 +4742,23 @@ local function BuildUI()
             playerTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
             dashboardTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
             dashboardTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
+            settingsTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
+            settingsTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
             contentTitle.Text = "Character Features"
+        elseif name == "Settings" then
+            settingsTabBtn.BackgroundColor3 = Color3.fromRGB(45,45,50)
+            settingsTabBtn.TextColor3 = Color3.fromRGB(235,235,235)
+            fishingAITabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
+            fishingAITabBtn.TextColor3 = Color3.fromRGB(200,200,200)
+            teleportTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
+            teleportTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
+            playerTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
+            playerTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
+            featureTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
+            featureTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
+            dashboardTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
+            dashboardTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
+            contentTitle.Text = "Game Performance & Server Management"
         else -- Dashboard
             dashboardTabBtn.BackgroundColor3 = Color3.fromRGB(45,45,50)
             dashboardTabBtn.TextColor3 = Color3.fromRGB(235,235,235)
@@ -4558,6 +4770,8 @@ local function BuildUI()
             playerTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
             featureTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
             featureTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
+            settingsTabBtn.BackgroundColor3 = Color3.fromRGB(40,40,46)
+            settingsTabBtn.TextColor3 = Color3.fromRGB(200,200,200)
             contentTitle.Text = "Fishing Analytics"
         end
     end
@@ -4567,6 +4781,69 @@ local function BuildUI()
     playerTabBtn.MouseButton1Click:Connect(function() SwitchTo("Player") end)
     featureTabBtn.MouseButton1Click:Connect(function() SwitchTo("Feature") end)
     dashboardTabBtn.MouseButton1Click:Connect(function() SwitchTo("Dashboard") end)
+    settingsTabBtn.MouseButton1Click:Connect(function() SwitchTo("Settings") end)
+
+    -- Settings Tab Event Handlers
+    fpsBoostBtn.MouseButton1Click:Connect(function()
+        local success = Settings.ToggleFPSBoost()
+        if success then
+            local status = Settings.GetStatus()
+            if status.fpsBoost then
+                fpsBoostBtn.Text = "⚡ FPS Boost: ON"
+                fpsBoostBtn.BackgroundColor3 = Color3.fromRGB(34, 139, 34)
+                performanceStatus.Text = "⚡ FPS Boost: ON | 🌈 HDR Shader: " .. (status.hdrShader and "ON" or "OFF")
+            else
+                fpsBoostBtn.Text = "🚀 Boost FPS"
+                fpsBoostBtn.BackgroundColor3 = Color3.fromRGB(70,130,255)
+                performanceStatus.Text = "⚡ FPS Boost: OFF | 🌈 HDR Shader: " .. (status.hdrShader and "ON" or "OFF")
+            end
+        end
+    end)
+
+    hdrShaderBtn.MouseButton1Click:Connect(function()
+        local success = Settings.ToggleHDRShader()
+        if success then
+            local status = Settings.GetStatus()
+            if status.hdrShader then
+                hdrShaderBtn.Text = "🌈 HDR: ON"
+                hdrShaderBtn.BackgroundColor3 = Color3.fromRGB(75, 0, 130)
+                performanceStatus.Text = "⚡ FPS Boost: " .. (status.fpsBoost and "ON" or "OFF") .. " | 🌈 HDR Shader: ON"
+            else
+                hdrShaderBtn.Text = "🌈 HDR Shader"
+                hdrShaderBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+                performanceStatus.Text = "⚡ FPS Boost: " .. (status.fpsBoost and "ON" or "OFF") .. " | 🌈 HDR Shader: OFF"
+            end
+        end
+    end)
+
+    rejoinBtn.MouseButton1Click:Connect(function()
+        Settings.RejoinServer()
+    end)
+
+    serverHopBtn.MouseButton1Click:Connect(function()
+        Settings.ServerHop()
+    end)
+
+    serverSmallBtn.MouseButton1Click:Connect(function()
+        Settings.ServerSmall()
+    end)
+
+    -- Update server status periodically
+    task.spawn(function()
+        while true do
+            if settingsFrame.Visible then
+                local serverInfo = Settings.GetServerInfo()
+                serverStatus.Text = string.format(
+                    "🌐 Server ID: %s\n👥 Players: %d/%d | 📶 Ping: %.0fms",
+                    string.sub(serverInfo.jobId, 1, 8) .. "...",
+                    serverInfo.players,
+                    serverInfo.maxPlayers,
+                    serverInfo.ping
+                )
+            end
+            task.wait(5)
+        end
+    end)
 
     -- Start with FishingAI visible (replaces Main)
     SwitchTo("FishingAI")
