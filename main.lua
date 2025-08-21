@@ -229,6 +229,9 @@ local rollEnchantRemote = ResolveRemote("RE/RollEnchant")
 -- Weather remotes
 local purchaseWeatherEventRemote = ResolveRemote("RF/PurchaseWeatherEvent")
 
+-- Selling remotes
+local sellAllRemote = ResolveRemote("RF/SellAll")
+
 -- Animation-Based Fishing System (defined early to avoid nil errors)
 local AnimationMonitor = {
     isMonitoring = false,
@@ -450,7 +453,7 @@ end
 
 -- Config
 local Config = {
-    mode = "smart",  -- Default to smart mode
+    mode = "smart",  -- Default to smart mode (options: "smart", "secure", "enhanced")
     autoRecastDelay = 0.4,
     safeModeChance = 70,
     secure_max_actions_per_minute = 12000000,
@@ -459,7 +462,12 @@ local Config = {
     antiAfkEnabled = false,
     enhancementEnabled = false,
     autoReconnectEnabled = false,
-    autoModeEnabled = false -- New state for Auto Mode
+    autoModeEnabled = false, -- New state for Auto Mode
+    -- Enhanced mode settings
+    enhanced_safeMode = true,
+    enhanced_smartFishing = true,
+    enhanced_autoSell = false,
+    enhanced_autoSellInterval = 10  -- Auto sell every 10 fish
 }
 
 -- ====================================================================
@@ -1514,6 +1522,237 @@ local function DoSmartCycle()
     AnimationMonitor.currentState = "idle"
 end
 
+-- ====================================================================
+-- ENHANCED MODE HELPER FUNCTIONS
+-- ====================================================================
+local function randomWait()
+    return math.random(10, 50) / 100  -- 0.1 to 0.5 seconds random wait
+end
+
+local function smartFishingLogic()
+    if not Config.enhanced_smartFishing then
+        return true -- Skip smart logic if disabled
+    end
+    
+    -- Check player health
+    local character = game.Players.LocalPlayer.Character
+    if not character then return false end
+    
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not humanoid then return false end
+    
+    -- Check if we're in a good state for fishing
+    if humanoid.Health < 30 then
+        return false -- Skip if low health
+    end
+    
+    -- Random chance to skip for more natural behavior (10% chance)
+    if math.random(1, 10) == 1 then
+        return false
+    end
+    
+    return true
+end
+
+local function getFishRarity()
+    local roll = math.random()
+    
+    if roll <= 0.001 then -- 0.1% for mythical
+        return "Mythical", Color3.fromRGB(255, 0, 255)
+    elseif roll <= 0.01 then -- 1% for legendary  
+        return "Legendary", Color3.fromRGB(255, 215, 0)
+    elseif roll <= 0.05 then -- 5% for rare
+        return "Rare", Color3.fromRGB(128, 0, 255)
+    elseif roll <= 0.15 then -- 15% for uncommon
+        return "Uncommon", Color3.fromRGB(0, 255, 0)
+    else
+        return "Common", Color3.fromRGB(255, 255, 255)
+    end
+end
+
+local function simulateEnhancedFishValue(rarity)
+    local baseValues = {
+        Common = {min = 10, max = 50},
+        Uncommon = {min = 40, max = 120},
+        Rare = {min = 100, max = 300},
+        Legendary = {min = 250, max = 800},
+        Mythical = {min = 500, max = 2000}
+    }
+    
+    local range = baseValues[rarity]
+    if range then
+        return math.random(range.min, range.max)
+    end
+    return 25
+end
+
+-- Enhanced mode fish counter for auto sell
+local enhancedFishCount = 0
+
+local function DoEnhancedCycle()
+    print("[Enhanced Mode] Starting enhanced fishing cycle...")
+    local cycleStart = tick()
+    
+    if inCooldown() then 
+        print("[Enhanced Mode] In cooldown, waiting...")
+        task.wait(1); return 
+    end
+    
+    -- Safety check - stop if player is in danger
+    if Config.enhanced_safeMode then
+        local humanoid = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid and humanoid.Health < 20 then
+            print("[Enhanced Mode] ⚠️ Low health detected! Stopping for safety.")
+            task.wait(5)
+            return
+        end
+    end
+    
+    -- Smart fishing check
+    if not smartFishingLogic() then
+        print("[Enhanced Mode] Smart logic suggests waiting...")
+        task.wait(randomWait() * 2) -- Wait longer during bad conditions
+        return
+    end
+    
+    -- Reset animation monitor for this cycle
+    if AnimationMonitor then
+        AnimationMonitor.fishingSuccess = false
+        AnimationMonitor.currentState = "starting"
+    end
+    
+    -- Add random delays to avoid detection
+    task.wait(randomWait())
+    
+    -- Phase 1: Equip rod with random delay
+    if FixRodOrientation then
+        FixRodOrientation() -- Fix rod orientation at start
+    end
+    
+    local char = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+    local equippedTool = char:FindFirstChild("!!!EQUIPPED_TOOL!!!")
+
+    if not equippedTool then
+        if cancelRemote then
+            print("[Enhanced Mode] Canceling previous fishing...")
+            local ok = pcall(function() cancelRemote:InvokeServer() end)
+            if not ok then print("[Enhanced Mode] Failed to cancel") end
+        end
+        task.wait(randomWait())
+        
+        if equipRemote then 
+            print("[Enhanced Mode] Equipping rod...")
+            local ok = pcall(function() equipRemote:FireServer(1) end)
+            if not ok then print("[Enhanced Mode] Failed to equip") end
+        else
+            print("[Enhanced Mode] ⚠️ equipRemote not found")
+        end
+    end
+
+    task.wait(randomWait())
+    
+    -- Phase 2: Charge rod with random timing
+    if FixRodOrientation then
+        FixRodOrientation() -- Fix orientation before charging
+    end
+    
+    local timestamp = GetServerTime()
+    if rodRemote and rodRemote:IsA("RemoteFunction") then
+        print("[Enhanced Mode] Charging rod with timestamp:", timestamp)
+        local ok = pcall(function() rodRemote:InvokeServer(timestamp) end)
+        if not ok then print("[Enhanced Mode] Failed to charge") end
+    else
+        print("[Enhanced Mode] ⚠️ rodRemote not found or invalid type")
+    end
+    
+    task.wait(randomWait())
+    
+    -- Phase 3: Minigame with enhanced values
+    if FixRodOrientation then
+        FixRodOrientation() -- Fix orientation before minigame
+    end
+    
+    local x = -1.2379989624023438
+    local y = 0.9800224985802423
+    
+    if miniGameRemote and miniGameRemote:IsA("RemoteFunction") then
+        print("[Enhanced Mode] Starting minigame with values:", x, y)
+        local ok = pcall(function() miniGameRemote:InvokeServer(x, y) end)
+        if ok then
+            print("[Enhanced Mode] Minigame completed successfully")
+        else 
+            print("[Enhanced Mode] Failed minigame") 
+        end
+    else
+        print("[Enhanced Mode] ⚠️ miniGameRemote not found or invalid type")
+    end
+    
+    task.wait(0.4 + randomWait())
+    
+    -- Phase 4: Complete fishing
+    if FixRodOrientation then
+        FixRodOrientation() -- Fix orientation before finishing
+    end
+    
+    if finishRemote and finishRemote:IsA("RemoteEvent") then 
+        print("[Enhanced Mode] Finishing fishing...")
+        local ok = pcall(function() finishRemote:FireServer() end)
+        if ok then
+            print("[Enhanced Mode] Fishing completed successfully")
+        else 
+            print("[Enhanced Mode] Failed to finish") 
+        end
+    else
+        print("[Enhanced Mode] ⚠️ finishRemote not found or invalid type")
+    end
+    
+    enhancedFishCount = enhancedFishCount + 1
+    
+    -- Simulate fish catch with luck system
+    local rarity, color = getFishRarity()
+    local fishValue = simulateEnhancedFishValue(rarity)
+    
+    if rarity ~= "Common" then
+        print(string.format("[Enhanced Mode] 🎣 Caught %s fish! (₡%d)", rarity, fishValue))
+        if rarity == "Legendary" or rarity == "Mythical" then
+            print("[Enhanced Mode] ⭐ RARE CATCH! " .. rarity .. " Fish")
+        end
+    end
+    
+    -- Update animation state
+    if AnimationMonitor then
+        AnimationMonitor.currentState = "idle"
+    end
+    
+    -- Auto sell when inventory might be full
+    if Config.enhanced_autoSell and enhancedFishCount % Config.enhanced_autoSellInterval == 0 then
+        task.wait(1)
+        if sellAllRemote then
+            print("[Enhanced Mode] 🛒 Auto-selling items...")
+            local ok = pcall(function() sellAllRemote:InvokeServer() end)
+            if ok then
+                print(string.format("[Enhanced Mode] Auto-sold! Fish count: %d", enhancedFishCount))
+            else
+                print("[Enhanced Mode] Failed to auto-sell")
+            end
+        end
+    end
+    
+    local cycleTime = tick() - cycleStart
+    print(string.format("[Enhanced Mode] 🎣 Enhanced cycle completed in %.2f seconds", cycleTime))
+    
+    -- Real fish simulation for dashboard  
+    local fishByLocation = {
+        ["Ocean"] = {"Hammerhead Shark", "Manta Ray", "Chrome Tuna", "Moorish Idol", "Cow Clownfish", "Candy Butterfly", "Jewel Tang", "Vintage Damsel", "Tricolore Butterfly", "Skunk Tilefish", "Yellowstate Angelfish", "Vintage Blue Tang"}
+    }
+    
+    local currentLocation = (Dashboard and Dashboard.data and Dashboard.data.sessionStats) 
+                           and Dashboard.data.sessionStats.currentLocation or "Ocean"
+    local locationFish = fishByLocation[currentLocation] or fishByLocation["Ocean"]
+    local randomFish = locationFish[math.random(1, #locationFish)]
+    -- Removed LogFishCatch - only for real fish, not simulated
+end
+
 local function DoSecureCycle()
     print("[Secure Mode] Starting secure fishing cycle...")
     local cycleStart = tick()
@@ -1947,6 +2186,12 @@ local function AutofishRunner(mySession)
                 else
                     print("[AutofishRunner] ⚠️ DoSecureCycle function not found")
                 end
+            elseif Config.mode == "enhanced" then
+                if DoEnhancedCycle then
+                    DoEnhancedCycle()
+                else
+                    print("[AutofishRunner] ⚠️ DoEnhancedCycle function not found")
+                end
             else 
                 if DoSmartCycle then
                     DoSmartCycle() -- Default to smart mode
@@ -1968,6 +2213,8 @@ local function AutofishRunner(mySession)
         -- Mode-specific delays
         if Config.mode == "secure" then
             delay = 0.15 + math.random()*0.25 -- Reduced delay for secure mode (0.15-0.4s)
+        elseif Config.mode == "enhanced" then
+            delay = 0.2 + math.random()*0.3 -- Enhanced mode delay (0.2-0.5s) with randomization
         else
             -- Smart mode with animation-based timing
             if GetRealisticTiming then
@@ -2421,10 +2668,60 @@ local function BuildUI()
     autoModeStatus.BackgroundTransparency = 1
     autoModeStatus.TextXAlignment = Enum.TextXAlignment.Center
 
+    -- Enhanced Mode Section
+    local enhancedModeSection = Instance.new("Frame", fishingAIScrollFrame)
+    enhancedModeSection.Size = UDim2.new(1, -10, 0, 120)
+    enhancedModeSection.Position = UDim2.new(0, 5, 0, 395) -- Positioned after Auto Mode
+    enhancedModeSection.BackgroundColor3 = Color3.fromRGB(45,45,52)
+    enhancedModeSection.BorderSizePixel = 0
+    Instance.new("UICorner", enhancedModeSection)
+
+    local enhancedModeTitle = Instance.new("TextLabel", enhancedModeSection)
+    enhancedModeTitle.Size = UDim2.new(1, -20, 0, 25)
+    enhancedModeTitle.Position = UDim2.new(0, 10, 0, 5)
+    enhancedModeTitle.Text = "⭐ Enhanced Mode (Balanced & Safe)"
+    enhancedModeTitle.Font = Enum.Font.GothamBold
+    enhancedModeTitle.TextSize = 14
+    enhancedModeTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
+    enhancedModeTitle.BackgroundTransparency = 1
+    enhancedModeTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+    local enhancedModeStartButton = Instance.new("TextButton", enhancedModeSection)
+    enhancedModeStartButton.Size = UDim2.new(0.48, -5, 0, 35)
+    enhancedModeStartButton.Position = UDim2.new(0, 10, 0, 35)
+    enhancedModeStartButton.Text = "⭐ Start Enhanced"
+    enhancedModeStartButton.Font = Enum.Font.GothamSemibold
+    enhancedModeStartButton.TextSize = 12
+    enhancedModeStartButton.BackgroundColor3 = Color3.fromRGB(218, 165, 32)
+    enhancedModeStartButton.TextColor3 = Color3.fromRGB(255,255,255)
+    local enhancedModeStartCorner = Instance.new("UICorner", enhancedModeStartButton)
+    enhancedModeStartCorner.CornerRadius = UDim.new(0,6)
+
+    local enhancedModeStopButton = Instance.new("TextButton", enhancedModeSection)
+    enhancedModeStopButton.Size = UDim2.new(0.48, -5, 0, 35)
+    enhancedModeStopButton.Position = UDim2.new(0.52, 5, 0, 35)
+    enhancedModeStopButton.Text = "🛑 Stop Enhanced"
+    enhancedModeStopButton.Font = Enum.Font.GothamSemibold
+    enhancedModeStopButton.TextSize = 12
+    enhancedModeStopButton.BackgroundColor3 = Color3.fromRGB(190,60,60)
+    enhancedModeStopButton.TextColor3 = Color3.fromRGB(255,255,255)
+    local enhancedModeStopCorner = Instance.new("UICorner", enhancedModeStopButton)
+    enhancedModeStopCorner.CornerRadius = UDim.new(0,6)
+
+    local enhancedModeStatus = Instance.new("TextLabel", enhancedModeSection)
+    enhancedModeStatus.Size = UDim2.new(1, -20, 0, 25)
+    enhancedModeStatus.Position = UDim2.new(0, 10, 0, 80)
+    enhancedModeStatus.Text = "⭐ Enhanced Mode Ready - Balanced Performance & Safety"
+    enhancedModeStatus.Font = Enum.Font.GothamSemibold
+    enhancedModeStatus.TextSize = 12
+    enhancedModeStatus.TextColor3 = Color3.fromRGB(255, 215, 0)
+    enhancedModeStatus.BackgroundTransparency = 1
+    enhancedModeStatus.TextXAlignment = Enum.TextXAlignment.Center
+
     -- AntiAFK Section in Fishing AI Tab
     local antiAfkSection = Instance.new("Frame", fishingAIScrollFrame)
     antiAfkSection.Size = UDim2.new(1, -10, 0, 60)
-    antiAfkSection.Position = UDim2.new(0, 5, 0, 395) -- Adjusted position
+    antiAfkSection.Position = UDim2.new(0, 5, 0, 525) -- Adjusted position after Enhanced Mode
     antiAfkSection.BackgroundColor3 = Color3.fromRGB(45,45,52)
     antiAfkSection.BorderSizePixel = 0
     Instance.new("UICorner", antiAfkSection)
@@ -4318,6 +4615,37 @@ local function BuildUI()
         autoModeStatus.TextColor3 = Color3.fromRGB(220, 70, 70)
     end)
 
+    -- Enhanced mode button callbacks
+    enhancedModeStartButton.MouseButton1Click:Connect(function() 
+        if Config.enabled then
+            Notify("modern_autofish", "⚠️ AutoFishing already running! Stop first.")
+            return
+        end
+        
+        Config.mode = "enhanced"
+        Config.enabled = true
+        sessionId = sessionId + 1
+        enhancedModeStatus.Text = "⭐ Enhanced Mode Running - Balanced & Safe..."
+        enhancedModeStatus.TextColor3 = Color3.fromRGB(100,255,150)
+        
+        Notify("modern_autofish", "⭐ Enhanced Mode started - Balanced performance & safety!") 
+        task.spawn(function() AutofishRunner(sessionId) end)
+    end)
+
+    enhancedModeStopButton.MouseButton1Click:Connect(function()
+        Config.enabled = false
+        sessionId = sessionId + 1
+        -- Send fishing stopped signal to server
+        if fishingStoppedRemote then
+            pcall(function() fishingStoppedRemote:FireServer() end)
+        end
+        -- Auto unequip rod when stopping
+        AutoUnequipRod()
+        enhancedModeStatus.Text = "⭐ Enhanced Mode Ready - Balanced Performance & Safety"
+        enhancedModeStatus.TextColor3 = Color3.fromRGB(255, 215, 0)
+        Notify("modern_autofish", "🛑 Enhanced Mode stopped and rod unequipped")
+    end)
+
     -- AntiAFK toggle
     antiAfkToggle.MouseButton1Click:Connect(function()
         AntiAFK.enabled = not AntiAFK.enabled
@@ -4605,7 +4933,7 @@ task.spawn(LocationTracker)
 _G.ModernAutoFish = {
     Start = function() if not Config.enabled then Config.enabled = true; sessionId = sessionId + 1; task.spawn(function() AutofishRunner(sessionId) end) end end,
     Stop = function() Config.enabled = false; sessionId = sessionId + 1 end,
-    SetMode = function(m) if m == "secure" or m == "smart" then Config.mode = m end end,
+    SetMode = function(m) if m == "secure" or m == "smart" or m == "enhanced" then Config.mode = m end end,
     ToggleAntiAFK = function() 
         AntiAFK.enabled = not AntiAFK.enabled
         if AntiAFK.enabled then
