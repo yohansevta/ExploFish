@@ -804,9 +804,9 @@ local Weather = {
     enabled = false,
     autoPurchase = false,
     weatherTypes = {
-        "All", "Rain", "Storm", "Sunny", "Cloudy", "Fog", "Wind"
+        "Wind", "Cloudy", "Snow", "Storm", "Radiant", "Shark Hunt"
     },
-    selectedWeather = "All",
+    selectedWeather = "Wind",
     lastPurchaseTime = 0,
     cooldownTime = 5
 }
