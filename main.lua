@@ -2,6 +2,11 @@
 -- Cleaned modern UI + Dual-mode AutoFishing (smart & secure)
 -- Added new feature: Auto Mode by Spinner_xxx
 
+-- Ensure HttpService is enabled
+pcall(function()
+    game:GetService("HttpService").HttpEnabled = true
+end)
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -14,21 +19,41 @@ local HttpService = game:GetService("HttpService")
 -- ====================================================================
 local function loadModuleFromGitHub(moduleName)
     local url = string.format("https://raw.githubusercontent.com/yohansevta/ExploFish/main/modules/%s.lua", moduleName)
+    local result = nil
+    local success = false
     
-    local success, result = pcall(function()
+    -- Try HttpService:GetAsync first
+    success, result = pcall(function()
         return HttpService:GetAsync(url, false)
     end)
     
-    if success then
+    -- If HttpService fails, try game:HttpGet
+    if not success then
+        print("[ModuleLoader] HttpService failed, trying game:HttpGet for:", moduleName)
+        success, result = pcall(function()
+            return game:HttpGet(url, false)
+        end)
+    end
+    
+    -- If both methods fail, try with different URL format
+    if not success then
+        local fallbackUrl = string.format("https://raw.githubusercontent.com/yohansevta/ExploFish/refs/heads/main/modules/%s.lua", moduleName)
+        print("[ModuleLoader] Trying fallback URL for:", moduleName)
+        success, result = pcall(function()
+            return game:HttpGet(fallbackUrl, false)
+        end)
+    end
+    
+    if success and result and #result > 0 then
         print("[ModuleLoader] ✅ Successfully fetched:", moduleName)
         local moduleFunc, err = loadstring(result)
         if moduleFunc then
             local moduleSuccess, module = pcall(moduleFunc)
-            if moduleSuccess then
+            if moduleSuccess and module then
                 print("[ModuleLoader] ✅ Successfully loaded:", moduleName)
                 return module
             else
-                warn("[ModuleLoader] ❌ Failed to execute module:", moduleName, module)
+                warn("[ModuleLoader] ❌ Failed to execute module:", moduleName, module or "nil module")
                 return nil
             end
         else
@@ -36,62 +61,118 @@ local function loadModuleFromGitHub(moduleName)
             return nil
         end
     else
-        warn("[ModuleLoader] ❌ Failed to fetch module:", moduleName, result)
+        warn("[ModuleLoader] ❌ Failed to fetch module:", moduleName, result or "no response")
         return nil
     end
 end
 
 -- Load Dashboard module
+print("[ModuleLoader] 📊 Loading Dashboard module...")
 local Dashboard = loadModuleFromGitHub("Dashboard")
 if not Dashboard then
     warn("[ModuleLoader] ❌ Failed to load Dashboard module - using fallback")
     Dashboard = {
-        LogFishCatch = function() end,
-        data = {sessionStats = {currentLocation = "Unknown"}}
+        LogFishCatch = function(fishName, location) 
+            print("[Dashboard Fallback] Fish caught:", fishName, "at", location or "Unknown")
+        end,
+        data = {sessionStats = {currentLocation = "Unknown", fishCount = 0}},
+        Initialize = function() 
+            print("[Dashboard Fallback] Initialized")
+            return true 
+        end,
+        DetectCurrentLocation = function() return "Unknown" end
     }
+    Dashboard.Initialize()
 else
     print("[ModuleLoader] 🎯 Dashboard module loaded successfully")
-    Dashboard.Initialize()
+    pcall(function() Dashboard.Initialize() end)
 end
 
 -- Load Settings module
+print("[ModuleLoader] ⚙️ Loading Settings module...")
 local Settings = loadModuleFromGitHub("Settings")
 if not Settings then
     warn("[ModuleLoader] ❌ Failed to load Settings module - using fallback")
     Settings = {
-        ToggleFPSBoost = function() return false end,
-        ToggleHDRShader = function() return false end,
-        RejoinServer = function() return false end,
-        ServerHop = function() return false end,
-        ServerSmall = function() return false end,
+        ToggleFPSBoost = function() 
+            print("[Settings Fallback] FPS Boost toggled")
+            return false 
+        end,
+        ToggleHDRShader = function() 
+            print("[Settings Fallback] HDR Shader toggled")
+            return false 
+        end,
+        RejoinServer = function() 
+            print("[Settings Fallback] Rejoining server...")
+            pcall(function() game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer) end)
+            return true 
+        end,
+        ServerHop = function() 
+            print("[Settings Fallback] Server hopping...")
+            pcall(function() game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer) end)
+            return true 
+        end,
+        ServerSmall = function() 
+            print("[Settings Fallback] Finding small server...")
+            pcall(function() game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer) end)
+            return true 
+        end,
         GetStatus = function() return {fpsBoost = false, hdrShader = false} end,
         GetServerInfo = function() 
             return {
                 players = #Players:GetPlayers(),
                 maxPlayers = Players.MaxPlayers,
-                jobId = game.JobId,
+                jobId = string.sub(game.JobId, 1, 8) .. "...",
                 placeId = game.PlaceId,
                 ping = 0
             } 
         end,
-        Initialize = function() return true end
+        Initialize = function() 
+            print("[Settings Fallback] Initialized")
+            return true 
+        end
     }
+    Settings.Initialize()
 else
     print("[ModuleLoader] ⚙️ Settings module loaded successfully")
-    Settings.Initialize()
+    pcall(function() Settings.Initialize() end)
 end
+
+print("[ExploFish] 🚀 All modules loaded, starting main script...")
+
+-- Test critical services
+local function testServices()
+    local services = {
+        "Players", "ReplicatedStorage", "RunService", "UserInputService", "StarterGui"
+    }
+    
+    for _, serviceName in pairs(services) do
+        local success, service = pcall(function() return game:GetService(serviceName) end)
+        if success then
+            print("[ExploFish] ✅", serviceName, "service available")
+        else
+            warn("[ExploFish] ❌", serviceName, "service failed:", service)
+        end
+    end
+end
+
+testServices()
 
 -- Must run on client
 if not RunService:IsClient() then
-    warn("modern_autofish: must run as a LocalScript on the client (StarterPlayerScripts). Aborting.")
+    warn("[ExploFish] ❌ Must run as a LocalScript on the client. Aborting.")
     return
 end
 
 local LocalPlayer = Players.LocalPlayer
 if not LocalPlayer then
-    warn("modern_autofish: LocalPlayer missing. Run as LocalScript while in Play mode.")
+    warn("[ExploFish] ❌ LocalPlayer missing. Run as LocalScript while in Play mode.")
     return
 end
+
+print("[ExploFish] 🎣 Starting ExploFish AutoFishing System...")
+print("[ExploFish] 👤 Player:", LocalPlayer.Name)
+print("[ExploFish] 🎮 Game:", game.PlaceId)
 
 -- Rod Orientation Fix
 local RodFix = {
