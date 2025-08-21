@@ -2721,7 +2721,7 @@ local function BuildUI()
     -- AntiAFK Section in Fishing AI Tab
     local antiAfkSection = Instance.new("Frame", fishingAIScrollFrame)
     antiAfkSection.Size = UDim2.new(1, -10, 0, 60)
-    antiAfkSection.Position = UDim2.new(0, 5, 0, 525) -- Adjusted position after Enhanced Mode
+    antiAfkSection.Position = UDim2.new(0, 5, 0, 735) -- Adjusted position after Auto Sell
     antiAfkSection.BackgroundColor3 = Color3.fromRGB(45,45,52)
     antiAfkSection.BorderSizePixel = 0
     Instance.new("UICorner", antiAfkSection)
@@ -2762,7 +2762,7 @@ local function BuildUI()
     -- ====================================================================
     local autoSellSection = Instance.new("Frame", fishingAIScrollFrame)
     autoSellSection.Size = UDim2.new(1, -10, 0, 200)
-    autoSellSection.Position = UDim2.new(0, 5, 0, 465) -- After AntiAFK
+    autoSellSection.Position = UDim2.new(0, 5, 0, 525) -- After Enhanced Mode
     autoSellSection.BackgroundColor3 = Color3.fromRGB(45,45,52)
     autoSellSection.BorderSizePixel = 0
     Instance.new("UICorner", autoSellSection)
@@ -2992,7 +2992,7 @@ local function BuildUI()
     -- Future Features Section (placeholder for upcoming features)
     local futureSection = Instance.new("Frame", fishingAIScrollFrame)
     futureSection.Size = UDim2.new(1, -10, 0, 80)
-    futureSection.Position = UDim2.new(0, 5, 0, 675) -- Adjusted position after AutoSell
+    futureSection.Position = UDim2.new(0, 5, 0, 795) -- Adjusted position after AntiAFK
     futureSection.BackgroundColor3 = Color3.fromRGB(45,45,52)
     futureSection.BorderSizePixel = 0
     Instance.new("UICorner", futureSection)
@@ -3019,7 +3019,7 @@ local function BuildUI()
     futureInfo.TextYAlignment = Enum.TextYAlignment.Top
 
     -- Set canvas size for fishing AI scroll (current content + space for future)
-    fishingAIScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 780) -- Increased for AutoSell section
+    fishingAIScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 850) -- Increased for proper Enhanced Mode positioning
 
     -- Teleport Tab Content
     local teleportFrame = Instance.new("Frame", contentContainer)
